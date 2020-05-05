@@ -1,9 +1,11 @@
 var Discord = require('discord.io');
 var Logger = require('winston');
-var Auth = require('./Auth.json');
+var PackageInfo = require('./package.json');
+var Auth = require('./auth.json');
 
 //Global variables
 var GameInProgress = false;
+var SelectingTeams = false;
 
 // Configure Logger settings
 Logger.remove(Logger.transports.Console);
@@ -24,17 +26,21 @@ bot.on('ready', function (evt) {
 bot.on('message', function (user, userID, channelID, message, evt) {
     // Our bot needs to know if it will execute a command
     // It will listen for messages that will start with `!`
-    if (message.substring(0, 1) == '!') {
-        var args = message.substring(1).split(' ');
+    if (message.substring(0, 3) == '!dc') {
+        var args = message.substring(4).split(' ');
+
+        Logger.debug('Command ' + args + ' from ' + user)
 
         switch(args[0]) {
             // commands
             case 'commands':
                 bot.sendMessage({
                     to: channelID,
-                    message: 'All commands must start with !\
-                              \nstart - Starts a new game\
-                              \nend - Ends the current game'
+                    message: 'COMMANDS:\
+                              \n!dc start - Starts a new game\
+                              \n!dc end - Ends the current game\
+                              \n!dc rules - Displays the rules\
+                              \n!dc join purple/green - Joins the purple or green team'
                 });
                 break;
             case 'start':
@@ -44,19 +50,21 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                         message: 'There\'s already a game in progress you big silly'
                     });
                 } else {
+                    GameInProgress = true;
+                    SelectingTeams = true;
+
                     bot.sendMessage({
                         to: channelID,
-                        message: 'Starting a new game of Decrypto'
+                        message: 'Starting a new game of Decrypto\
+                                  \nJoin a team, using the commands \'!dc join purple\' or \'!dc join green\''
                     });
-
-                    playDecrypto();
                 }
                 break;
             case 'end':
                 if (!GameInProgress) { 
                     bot.sendMessage({
                         to: channelID,
-                        message: 'There\'s no game to end, type !start to begin one'
+                        message: 'There\'s no game to end, type !dc start to begin one'
                     });
                 } else {
                     endGame();
@@ -67,13 +75,31 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                     });
                 }
                 break;
+            case 'rules':
+                bot.sendMessage({
+                    to: channelID,
+                    message: 'I haven\'t written any rules yet'
+                });
+                break;
+            case 'join':
+                bot.sendMessage({
+                    to: channelID,
+                    message: 'You can\'t join a team yet, I haven\'t finished writing this bit'
+                });
+                break;
+            default:
+                bot.sendMessage({
+                    to: channelID,
+                    message: 'Decrypto bot version ' + PackageInfo.version + ' by ' + PackageInfo.author + '\
+                              \nTo see how to play, type \'!dc rules\'\
+                              \nTo start a new game, type \'!dc start\'\
+                              \nTo see a full list of commands, type \'!dc commands\'\
+                              \nIf you find any bugs, or have ideas for improvements, please visit ' + PackageInfo.bugs.url + ' to log them'
+                });
+                break;
          }
      }
 });
-
-function playDecrypto() {
-    GameInProgress = true;
-}
 
 function endGame() {
     GameInProgress = false;
