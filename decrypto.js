@@ -146,30 +146,50 @@ function endGame(gameProperties) {
     gameProperties.greenTeamMembers = [];
 }
 
-// Adds a player to their chosen team, removing them first if they already exist
+// Adds a player to their chosen team, removing them from the other team first
 // in order to allow switching during selection
 function addPlayerToTeam(userID, user, team, gameProperties) {
-    var playerIndex = gameProperties.purpleTeamMembers.findIndex(x => x.userID == userID);
+    var player = new Player(userID, user);
     
-    Logger.debug('Adding player ' + userID + ' to team ' + team + ' in channel ' + gameProperties.channelID);    
-    
-    if (playerIndex == -1) {
-        playerIndex = gameProperties.greenTeamMembers.findIndex(x => x.userID == userID);
+    if (team == 'purple') {
+        var playerIndex = gameProperties.purpleTeamMembers.findIndex(x => x.userID == player.userID);
 
-        if (playerIndex > -1) {
-            gameProperties.greenTeamMembers.splice(playerIndex, 1);
+        if (playerIndex == -1) {
+            playerIndex = gameProperties.greenTeamMembers.findIndex(x => x.userID == player.userID);
+    
+            if (playerIndex > -1) {
+                gameProperties.greenTeamMembers.splice(playerIndex, 1);
+            }
+
+            gameProperties.purpleTeamMembers.push(player);
+        } else {
+            bot.sendMessage({
+                to: gameProperties.channelID,
+                message: user + ' is already on the ' + team + ' team'
+            });
+            return;
         }
     } else {
-        gameProperties.purpleTeamMembers.splice(playerIndex, 1);
+        var playerIndex = gameProperties.greenTeamMembers.findIndex(x => x.userID == player.userID);
+
+        if (playerIndex == -1) {
+            playerIndex = gameProperties.purpleTeamMembers.findIndex(x => x.userID == player.userID);
+    
+            if (playerIndex > -1) {
+                gameProperties.purpleTeamMembers.splice(playerIndex, 1);
+            }
+
+            gameProperties.greenTeamMembers.push(player);
+        } else {
+            bot.sendMessage({
+                to: gameProperties.channelID,
+                message: user + ' is already on the ' + team + ' team'
+            });
+            return;
+        }
     }
 
-    player = new Player(userID, user);
-
-    if (team == 'purple') {
-        gameProperties.purpleTeamMembers.push(player);
-    } else {
-        gameProperties.greenTeamMembers.push(player);
-    }
+    Logger.debug('Adding player ' + userID + ' to team ' + team + ' in channel ' + gameProperties.channelID);
 
     var purpleTeamMembers = [];
     var greenTeamMembers = [];
