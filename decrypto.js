@@ -41,6 +41,16 @@ bot.on('message', function (user, userID, channelID, message, evt) {
 
         switch(args[0]) {
             // List all possible commands
+            case 'help':
+                bot.sendMessage({
+                    to: channelID,
+                    message: 'Decrypto bot version ' + PackageInfo.version + ' by ' + PackageInfo.author + '\
+                              \nTo see how to play, type \'!dc rules\'\
+                              \nTo start a new game, type \'!dc start\'\
+                              \nTo see a full list of commands, type \'!dc commands\'\
+                              \nIf you find any bugs, or have ideas for improvements, please visit ' + PackageInfo.bugs.url + ' to log them'
+                });
+                break;
             case 'commands':
                 bot.sendMessage({
                     to: channelID,
@@ -50,6 +60,12 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                               \n!dc rules - Displays the rules\
                               \n!dc join purple/green - Joins the purple or green team\
                               \n!dc ready - Indicates that team selection is complete, and you wish to begin the game'
+                });
+                break;
+            case 'rules':
+                bot.sendMessage({
+                    to: channelID,
+                    message: 'I haven\'t written any rules yet'
                 });
                 break;
             // Starts the game, beginning with team selection
@@ -71,29 +87,7 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                                   \nWhen team selection is complete, type \'!dc ready\' to begin'
                     });
                 }
-                break;
-            // Ends an in progress game
-            case 'end':
-                if (!gameProperties.gameInProgress) { 
-                    bot.sendMessage({
-                        to: channelID,
-                        message: 'There\'s no game to end, type \'!dc start\' to begin one'
-                    });
-                } else {
-                    endGame(gameProperties);
-
-                    bot.sendMessage({
-                        to: channelID,
-                        message: 'You have killed the game, you monster'
-                    });
-                }
-                break;
-            case 'rules':
-                bot.sendMessage({
-                    to: channelID,
-                    message: 'I haven\'t written any rules yet'
-                });
-                break;
+                break;                       
             // Adds a player to their selected team
             case 'join':
                 if (!gameProperties.gameInProgress) {
@@ -122,16 +116,27 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                     to: channelID,
                     message: 'I appriciate your enthusiasm, but there is no game here yet'
                 });
+            // Ends an in progress game
+            case 'end':
+                if (!gameProperties.gameInProgress) { 
+                    bot.sendMessage({
+                        to: channelID,
+                        message: 'There\'s no game to end, type \'!dc start\' to begin one'
+                    });
+                } else {
+                    endGame(gameProperties);
+
+                    bot.sendMessage({
+                        to: channelID,
+                        message: 'You have killed the game, you monster'
+                    });
+                }
+                break; 
             default:
                 bot.sendMessage({
                     to: channelID,
-                    message: 'Decrypto bot version ' + PackageInfo.version + ' by ' + PackageInfo.author + '\
-                              \nTo see how to play, type \'!dc rules\'\
-                              \nTo start a new game, type \'!dc start\'\
-                              \nTo see a full list of commands, type \'!dc commands\'\
-                              \nIf you find any bugs, or have ideas for improvements, please visit ' + PackageInfo.bugs.url + ' to log them'
+                    message: 'That is not a valid command, type \'!dc commands\' to get a list'
                 });
-                break;
          }
      }
 });
