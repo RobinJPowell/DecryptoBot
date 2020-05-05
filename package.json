@@ -15,5 +15,9 @@
   "bugs": {
     "url": "https://github.com/RobinJPowell/DecryptoBot/issues"
   },
-  "homepage": "https://github.com/RobinJPowell/DecryptoBot#readme"
+  "homepage": "https://github.com/RobinJPowell/DecryptoBot#readme",
+  "dependencies": {
+    "discord.io": "https://github.com/woor/discord.io/tarball/gateway_v6",
+    "winston": "^3.2.1"
+  }
 }
