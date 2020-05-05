@@ -3,9 +3,8 @@ var Logger = require('winston');
 var PackageInfo = require('./package.json');
 var Auth = require('./auth.json');
 
-//Global variables
-var GameInProgress = false;
-var SelectingTeams = false;
+//Global Variables
+var AllGames = [];
 
 // Configure Logger settings
 Logger.remove(Logger.transports.Console);
@@ -24,15 +23,24 @@ bot.on('ready', function (evt) {
     Logger.info(bot.username + ' - (' + bot.id + ')');
 });
 bot.on('message', function (user, userID, channelID, message, evt) {
-    // Our bot needs to know if it will execute a command
-    // It will listen for messages that will start with `!`
+    // Bot listens for messages that start with `!dc`
     if (message.substring(0, 3) == '!dc') {
         var args = message.substring(4).split(' ');
 
-        Logger.debug('Command ' + args + ' from ' + user)
+        Logger.debug('Command ' + args + ' from ' + userID + ' in channel ' + channelID)
+
+        // Find the game being run in the channel sending the command
+        var gameProperties = AllGames.find(x => x.channelID == channelID)
+
+        // If this channel doesn't have a game set up yet, create one
+        if (gameProperties == null) {
+            Logger.debug('New GameProperties created for channel ' + channelID);            
+            gameProperties = new GameProperties(channelID, Date.now());
+            AllGames.push(gameProperties);
+        }
 
         switch(args[0]) {
-            // commands
+            // List all possible commands
             case 'commands':
                 bot.sendMessage({
                     to: channelID,
@@ -40,34 +48,39 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                               \n!dc start - Starts a new game\
                               \n!dc end - Ends the current game\
                               \n!dc rules - Displays the rules\
-                              \n!dc join purple/green - Joins the purple or green team'
+                              \n!dc join purple/green - Joins the purple or green team\
+                              \n!dc ready - Indicates that team selection is complete, and you wish to begin the game'
                 });
                 break;
+            // Starts the game, beginning with team selection
             case 'start':
-                if (GameInProgress) { 
+                if (gameProperties.gameInProgress) { 
                     bot.sendMessage({
                         to: channelID,
                         message: 'There\'s already a game in progress you big silly'
                     });
                 } else {
-                    GameInProgress = true;
-                    SelectingTeams = true;
+                    gameProperties.gameInProgress = true;
+                    gameProperties.lastGameStartTime = Date.now();
+                    gameProperties.selectingTeams = true;
 
                     bot.sendMessage({
                         to: channelID,
                         message: 'Starting a new game of Decrypto\
-                                  \nJoin a team, using the commands \'!dc join purple\' or \'!dc join green\''
+                                  \nJoin a team, using the commands \'!dc join purple\' or \'!dc join green\'\
+                                  \nWhen team selection is complete, type \'!dc ready\' to begin'
                     });
                 }
                 break;
+            // Ends an in progress game
             case 'end':
-                if (!GameInProgress) { 
+                if (!gameProperties.gameInProgress) { 
                     bot.sendMessage({
                         to: channelID,
-                        message: 'There\'s no game to end, type !dc start to begin one'
+                        message: 'There\'s no game to end, type \'!dc start\' to begin one'
                     });
                 } else {
-                    endGame();
+                    endGame(gameProperties);
 
                     bot.sendMessage({
                         to: channelID,
@@ -81,12 +94,34 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                     message: 'I haven\'t written any rules yet'
                 });
                 break;
+            // Adds a player to their selected team
             case 'join':
+                if (!gameProperties.gameInProgress) {
+                    bot.sendMessage({
+                        to: channelID,
+                        message: 'There\'s no game currently in progress, type \'!dc start\' to begin one'
+                    });
+                } else if (!gameProperties.selectingTeams) {
+                    bot.sendMessage({
+                        to: channelID,
+                        message: 'Team selection is not currently in progress'
+                    });
+                } else {
+                    if (args[1] == 'purple' || args[1] == 'green') {                   
+                        addPlayerToTeam(userID, user, args[1], gameProperties);
+                    } else {
+                        bot.sendMessage({
+                            to: channelID,
+                            message: args[1] + ' is not a valid team'
+                        });
+                    }
+                }
+                break;
+            case 'ready':
                 bot.sendMessage({
                     to: channelID,
-                    message: 'You can\'t join a team yet, I haven\'t finished writing this bit'
+                    message: 'I appriciate your enthusiasm, but there is no game here yet'
                 });
-                break;
             default:
                 bot.sendMessage({
                     to: channelID,
@@ -101,6 +136,67 @@ bot.on('message', function (user, userID, channelID, message, evt) {
      }
 });
 
-function endGame() {
-    GameInProgress = false;
+//Ends the game by resetting its properties
+function endGame(gameProperties) {
+    Logger.debug('Ending game in channel ' + gameProperties.channelID);
+
+    gameProperties.gameInProgress = false;
+    gameProperties.selectingTeams = false;
+    gameProperties.purpleTeamMembers = [];
+    gameProperties.greenTeamMembers = [];
+}
+
+// Adds a player to their chosen team, removing them first if they already exist
+// in order to allow switching during selection
+function addPlayerToTeam(userID, user, team, gameProperties) {
+    var playerIndex = gameProperties.purpleTeamMembers.findIndex(x => x.userID == userID);
+    
+    Logger.debug('Adding player ' + userID + ' to team ' + team + ' in channel ' + gameProperties.channelID);    
+    
+    if (playerIndex == -1) {
+        playerIndex = gameProperties.greenTeamMembers.findIndex(x => x.userID == userID);
+
+        if (playerIndex > -1) {
+            gameProperties.greenTeamMembers.splice(playerIndex, 1);
+        }
+    } else {
+        gameProperties.purpleTeamMembers.splice(playerIndex, 1);
+    }
+
+    player = new Player(userID, user);
+
+    if (team == 'purple') {
+        gameProperties.purpleTeamMembers.push(player);
+    } else {
+        gameProperties.greenTeamMembers.push(player);
+    }
+
+    var purpleTeamMembers = [];
+    var greenTeamMembers = [];
+
+    gameProperties.purpleTeamMembers.forEach(element => purpleTeamMembers.push(element.user));
+    gameProperties.greenTeamMembers.forEach(element => greenTeamMembers.push(element.user));
+
+    bot.sendMessage({
+        to: gameProperties.channelID,
+        message: user + ' has joined the ' + team + ' team\
+                 \nPurple Team - ' + purpleTeamMembers + '\
+                 \nGreen Team - ' + greenTeamMembers
+    });
+}
+
+// Each game in progress is stored in an instance of GameProperties
+function GameProperties (channelID, now) {
+    this.channelID = channelID;
+    this.gameInProgress = false;
+    this.selectingTeams = false;
+    this.purpleTeamMembers = [];
+    this.greenTeamMembers = [];
+    this.lastGameStartTime = now;
+};
+
+// Each player in a team is stored in an instance of Player
+function Player (userID, user) {
+    this.userID = userID;
+    this.user = user;
 }
