@@ -69,7 +69,8 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                               \n!dc end - Ends the current game\
                               \n!dc join black/white - Joins the black or white team\
                               \n!dc ready - Indicates that team selection is complete, and you wish to begin the game\
-                              \n!dc clues clue1, clue2, clue3 - Submit your clues when you are the Encryptor'
+                              \n!dc clues clue1, clue2, clue3 - Submit your clues when you are the Encryptor\
+                              \n!dc guess 123 - Guess the order of the keywords'
                 });
                 break;
             case 'rules':
@@ -151,7 +152,7 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                 } else if (gameProperties.selectingTeams) {
                     bot.sendMessage({
                         to: channelID,
-                        message: 'Team selection is still in progress, chill out with your clues'
+                        message: 'Team selection is still in progress, it\'s too early for clues'
                     });
                 } else if (gameProperties.currentEncryptor.userID != userID) {
                     bot.sendMessage({
@@ -165,6 +166,27 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                     });
                 } else {
                     validateAndRecordClues(args, gameProperties);
+                }
+                break;
+            // Guess the current code
+            case 'guess':
+                if (!gameProperties.gameInProgress) {
+                    bot.sendMessage({
+                        to: channelID,
+                        message: 'There\'s no game currently in progress, type \'!dc start\' to begin one'
+                    });
+                } else if (gameProperties.selectingTeams) {
+                    bot.sendMessage({
+                        to: channelID,
+                        message: 'Team selection is still in progress, chill out with your guesses'
+                    });
+                } else if (gameProperties.currentClues.length == 0) {
+                    bot.sendMessage({
+                        to: channelID,
+                        message: 'No clues have been given yet, cool your jets'
+                    });
+                } else {
+                    validateAndRecordGuess(args[1], userID, gameProperties);
                 }
                 break;
             // Ends an in progress game
@@ -292,7 +314,12 @@ function sendKeywordsToTeams (gameProperties) {
 
 // Randomly select a code and send it to the next encryptor
 function sendCodeToNextEncryptor (gameProperties) {
-    gameProperties.currentCode = CodeList[Math.floor(Math.random()*CodeList.length)];
+    var currentCode = CodeList[Math.floor(Math.random()*CodeList.length)];
+
+    for (var i = 0; i < currentCode.length; i++) { 
+        gameProperties.currentCode.push(currentCode.charAt(i)); 
+    } 
+    
     gameProperties.currentTeam = gameProperties.nextTurn;
     
     if (gameProperties.currentTeam == 'black') {
@@ -317,7 +344,7 @@ function sendCodeToNextEncryptor (gameProperties) {
 
     bot.sendMessage({
         to: gameProperties.currentEncryptor.userID,
-        message: 'Your code is ' + gameProperties.currentCode
+        message: 'Your code is ' + currentCode
     });
     bot.sendMessage({
         to: gameProperties.channelID,
@@ -332,7 +359,7 @@ function sendCodeToNextEncryptor (gameProperties) {
 function validateAndRecordClues(args, gameProperties) {    
     var cluesList = "";
     
-    // args is split by ' ', need to recombine and split by ', ' to get the clues
+    // args is split by ' ', need to recombine and split by ',' to get the clues
     // args[0] will always have been the keyword 'clues', so start at 1
     for (var i = 1; i < args.length; i++) {
         cluesList = cluesList + " " + args[i];
@@ -346,15 +373,82 @@ function validateAndRecordClues(args, gameProperties) {
             message: 'The clues for this round are:\
                       \n' + gameProperties.currentClues[0] + '\
                       \n' + gameProperties.currentClues[1] + '\
-                      \n' + gameProperties.currentClues[2]
+                      \n' + gameProperties.currentClues[2] + '\
+                      \n---------------------------------------------------------------------------'
         });
-    } else {
-        gameProperties.currentClues = [];
 
+        setTimeout(() => { bot.sendMessage({
+                                to: gameProperties.channelID,
+                                message: 'Both teams should now submit a guess using \'!dc guess 123\'\
+                                          \nOnly the first guess submitted from each team will be accepted'
+                            });
+                        }, 1000);
+    } else {
         bot.sendMessage({
             to: gameProperties.channelID,
-            message: 'You have to submit 3 clues, you have submitted ' + gameProperties.currentClues.length
+            message: 'You have to submit 3 clues'
         });
+
+        gameProperties.currentClues = [];
+    }
+}
+
+// Validate that 3 digits have been submitted and that they are the first guess for a team, then record them
+function validateAndRecordGuess(guess, userID, gameProperties) {    
+    if (guess == null || guess.length != 3 || guess != parseInt(guess) || guess.indexOf('.') > -1) {
+        bot.sendMessage({
+            to: gameProperties.channelID,
+            message: 'Your guess must be 3 digits' 
+        });
+        return;
+    }
+
+    var playerIndex = gameProperties.blackTeamMembers.findIndex(element => element.userID == userID);
+
+    if (playerIndex > -1) {
+        if (gameProperties.blackTeamGuess.length > 0) {
+            bot.sendMessage({
+                to: gameProperties.channelID,
+                message: 'Black team have already entered their guess' 
+            });
+            return;            
+        }
+
+        for (var i = 0; i < guess.length; i++) {
+            if (gameProperties.blackTeamGuess.indexOf(guess.charAt(i)) > -1 ) {
+                bot.sendMessage({
+                    to: gameProperties.channelID,
+                    message: 'Your cannot enter the same digit multiple times' 
+                });
+                gameProperties.blackTeamGuess = [];
+                return;
+            }
+            gameProperties.blackTeamGuess.push(guess.charAt(i)); 
+        } 
+    } else {
+        playerIndex = gameProperties.whiteTeamMembers.findIndex(element => element.userID == userID);
+
+        if (playerIndex > -1) {
+            if (gameProperties.whiteTeamGuess.length > 0) {
+                bot.sendMessage({
+                    to: gameProperties.channelID,
+                    message: 'White team have already entered their guess' 
+                });
+                return;  
+            }
+        }
+
+        for (var i = 0; i < guess.length; i++) {
+            if (gameProperties.whiteTeamGuess.indexOf(guess.charAt(i)) > -1 ) {
+                bot.sendMessage({
+                    to: gameProperties.channelID,
+                    message: 'Your cannot enter the same digit multiple times' 
+                });
+                gameProperties.whiteTeamGuess = [];
+                return;
+            }
+            gameProperties.whiteTeamGuess.push(guess.charAt(i)); 
+        }
     }
 }
 
@@ -366,11 +460,13 @@ function endGame(gameProperties) {
     gameProperties.selectingTeams = false;
     gameProperties.blackTeamMembers = [];
     gameProperties.nextBlackEncryptor = 0;
+    gameProperties.blackTeamGuess = [];
     gameProperties.whiteTeamMembers = [];
-    gameProperties.nextWhiteEncryptor = 0
+    gameProperties.nextWhiteEncryptor = 0;
+    gameProperties.whiteTeamGuess = [];
     gameProperties.nextTurn = 'white';
-    gameProperties.currentCode = 0;
-    gameProperties.currentTeam = ""
+    gameProperties.currentCode = [];
+    gameProperties.currentTeam = "";
     gameProperties.currentEncryptor = null;
     gameProperties.currentClues = []
 }
@@ -382,11 +478,13 @@ function GameProperties (channelID, now) {
     this.selectingTeams = false;
     this.blackTeamMembers = [];
     this.nextBlackEncryptor = 0
+    this.blackTeamGuess = [];
     this.whiteTeamMembers = [];
-    this.nextWhiteEncryptor = 0
+    this.nextWhiteEncryptor = 0;
+    this.whiteTeamGuess = [];
     this.lastGameStartTime = now;
     this.nextTurn = 'white';
-    this.currentCode = 0;
+    this.currentCode = [];
     this.currentTeam = "";
     this.currentEncryptor = null;
     this.currentClues = [];
