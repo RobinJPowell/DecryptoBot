@@ -1,10 +1,14 @@
+//Global Variables
 var Discord = require('discord.io');
 var Logger = require('winston');
+var Fs = require("fs");
 var PackageInfo = require('./package.json');
 var Auth = require('./auth.json');
-
-//Global Variables
 var AllGames = [];
+
+// Read the clue words from the file
+var Words = Fs.readFileSync("./words.txt").toString();
+var WordList = Words.split(",");
 
 // Configure Logger settings
 Logger.remove(Logger.transports.Console);
@@ -30,7 +34,7 @@ bot.on('message', function (user, userID, channelID, message, evt) {
         Logger.debug('Command ' + args + ' from ' + userID + ' in channel ' + channelID)
 
         // Find the game being run in the channel sending the command
-        var gameProperties = AllGames.find(x => x.channelID == channelID)
+        var gameProperties = AllGames.find(element => element.channelID == channelID)
 
         // If this channel doesn't have a game set up yet, create one
         if (gameProperties == null) {
@@ -55,9 +59,10 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                 bot.sendMessage({
                     to: channelID,
                     message: 'COMMANDS:\
+                              \n!dc help - Displays the help screen\
+                              \n!dc rules - Displays the rules\
                               \n!dc start - Starts a new game\
                               \n!dc end - Ends the current game\
-                              \n!dc rules - Displays the rules\
                               \n!dc join purple/green - Joins the purple or green team\
                               \n!dc ready - Indicates that team selection is complete, and you wish to begin the game'
                 });
@@ -112,10 +117,25 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                 }
                 break;
             case 'ready':
-                bot.sendMessage({
-                    to: channelID,
-                    message: 'I appriciate your enthusiasm, but there is no game here yet'
-                });
+                if (!gameProperties.gameInProgress) {
+                    bot.sendMessage({
+                        to: channelID,
+                        message: 'There\'s no game currently in progress, type \'!dc start\' to begin one'
+                    });
+                } else if (!gameProperties.selectingTeams) {
+                    bot.sendMessage({
+                        to: channelID,
+                        message: 'There\'s already a game in progress you big silly'
+                    });
+                } else {
+                    sendWordsToTeams(gameProperties);
+
+                    bot.sendMessage({
+                        to: channelID,
+                        message: 'Your team\'s words have been messaged to you, good luck'
+                    });
+                }
+                break;
             // Ends an in progress game
             case 'end':
                 if (!gameProperties.gameInProgress) { 
@@ -141,26 +161,16 @@ bot.on('message', function (user, userID, channelID, message, evt) {
      }
 });
 
-//Ends the game by resetting its properties
-function endGame(gameProperties) {
-    Logger.debug('Ending game in channel ' + gameProperties.channelID);
-
-    gameProperties.gameInProgress = false;
-    gameProperties.selectingTeams = false;
-    gameProperties.purpleTeamMembers = [];
-    gameProperties.greenTeamMembers = [];
-}
-
 // Adds a player to their chosen team, removing them from the other team first
 // in order to allow switching during selection
 function addPlayerToTeam(userID, user, team, gameProperties) {
     var player = new Player(userID, user);
     
     if (team == 'purple') {
-        var playerIndex = gameProperties.purpleTeamMembers.findIndex(x => x.userID == player.userID);
+        var playerIndex = gameProperties.purpleTeamMembers.findIndex(element => element.userID == player.userID);
 
         if (playerIndex == -1) {
-            playerIndex = gameProperties.greenTeamMembers.findIndex(x => x.userID == player.userID);
+            playerIndex = gameProperties.greenTeamMembers.findIndex(element => element.userID == player.userID);
     
             if (playerIndex > -1) {
                 gameProperties.greenTeamMembers.splice(playerIndex, 1);
@@ -175,10 +185,10 @@ function addPlayerToTeam(userID, user, team, gameProperties) {
             return;
         }
     } else {
-        var playerIndex = gameProperties.greenTeamMembers.findIndex(x => x.userID == player.userID);
+        var playerIndex = gameProperties.greenTeamMembers.findIndex(element => element.userID == player.userID);
 
         if (playerIndex == -1) {
-            playerIndex = gameProperties.purpleTeamMembers.findIndex(x => x.userID == player.userID);
+            playerIndex = gameProperties.purpleTeamMembers.findIndex(element => element.userID == player.userID);
     
             if (playerIndex > -1) {
                 gameProperties.purpleTeamMembers.splice(playerIndex, 1);
@@ -208,6 +218,48 @@ function addPlayerToTeam(userID, user, team, gameProperties) {
                  \nPurple Team - ' + purpleTeamMembers + '\
                  \nGreen Team - ' + greenTeamMembers
     });
+}
+
+function sendWordsToTeams (gameProperties) {    
+    var wordsToUse = [];
+    while(wordsToUse.length < 8) {
+        var word = WordList[Math.floor(Math.random()*WordList.length)];
+        if (wordsToUse.indexOf(word) == -1) {
+            wordsToUse.push(word);
+        }
+    }
+
+    gameProperties.purpleTeamMembers.forEach(element => {
+        bot.sendMessage({
+            to: element.userID,
+            message: 'Your team\'s words are:\
+                      \n1 - ' + wordsToUse[0] + '\
+                      \n2 - ' + wordsToUse[1] + '\
+                      \n3 - ' + wordsToUse[2] + '\
+                      \n4 - ' + wordsToUse[3]
+        });
+    })
+
+    gameProperties.greenTeamMembers.forEach(element => {
+        bot.sendMessage({
+            to: element.userID,
+            message: 'Your team\'s words are:\
+                      \n1 - ' + wordsToUse[4] + '\
+                      \n2 - ' + wordsToUse[5] + '\
+                      \n3 - ' + wordsToUse[6] + '\
+                      \n4 - ' + wordsToUse[7]
+        });
+    })
+}
+
+//Ends the game by resetting its properties
+function endGame(gameProperties) {
+    Logger.debug('Ending game in channel ' + gameProperties.channelID);
+
+    gameProperties.gameInProgress = false;
+    gameProperties.selectingTeams = false;
+    gameProperties.purpleTeamMembers = [];
+    gameProperties.greenTeamMembers = [];
 }
 
 // Each game in progress is stored in an instance of GameProperties

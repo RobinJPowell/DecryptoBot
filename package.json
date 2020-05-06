@@ -18,6 +18,7 @@
   "homepage": "https://github.com/RobinJPowell/DecryptoBot#readme",
   "dependencies": {
     "discord.io": "https://github.com/woor/discord.io/tarball/gateway_v6",
+    "fs": "0.0.1-security",
     "winston": "^3.2.1"
   }
 }
