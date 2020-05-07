@@ -528,8 +528,10 @@ function scoreRound(gameProperties) {
         message: 'The correct code was ' + gameProperties.currentCode[0]  + gameProperties.currentCode[1]  + gameProperties.currentCode[2]
     });
 
-    if (gameProperties.currentTeam = 'black') {
-        if (gameProperties.currentCode != gameProperties.blackTeamGuess) {
+    if (gameProperties.currentTeam == 'black') {
+        if (gameProperties.currentCode[0] != gameProperties.blackTeamGuess[0]
+            || gameProperties.currentCode[1] != gameProperties.blackTeamGuess[1]
+            || gameProperties.currentCode[2] != gameProperties.blackTeamGuess[2]) {
             gameProperties.blackTeamMiscommunicationTokens += 1;
             pointsScored = true;
 
@@ -539,7 +541,9 @@ function scoreRound(gameProperties) {
             });
         }
 
-        if (gameProperties.currentCode == gameProperties.whiteTeamGuess) {
+        if (gameProperties.currentCode[0] == gameProperties.whiteTeamGuess[0]
+            && gameProperties.currentCode[1] == gameProperties.whiteTeamGuess[1]
+            && gameProperties.currentCode[2] == gameProperties.whiteTeamGuess[2]) {
             gameProperties.whiteTeamInterceptionTokens += 1;
             pointsScored = true;
 
@@ -549,7 +553,9 @@ function scoreRound(gameProperties) {
             });
         }
     } else {
-        if (gameProperties.currentCode != gameProperties.whiteTeamGuess) {
+        if (gameProperties.currentCode[0] != gameProperties.whiteTeamGuess[0]
+            || gameProperties.currentCode[1] != gameProperties.whiteTeamGuess[1]
+            || gameProperties.currentCode[2] != gameProperties.whiteTeamGuess[2]) {
             gameProperties.whiteTeamMiscommunicationTokens += 1;
             pointsScored = true;
 
@@ -559,7 +565,9 @@ function scoreRound(gameProperties) {
             });
         }
 
-        if (gameProperties.currentCode == gameProperties.blackTeamGuess) {
+        if (gameProperties.currentCode[0] == gameProperties.blackTeamGuess[0]
+            && gameProperties.currentCode[1] == gameProperties.blackTeamGuess[1]
+            && gameProperties.currentCode[2] == gameProperties.blackTeamGuess[2]) {
             gameProperties.blackTeamInterceptionTokens += 1;
             pointsScored = true;
 
