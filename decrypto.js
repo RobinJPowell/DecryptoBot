@@ -152,6 +152,7 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                 }
                 break;
             // Clues submitted by the team Encryptor
+            case 'clue':
             case 'clues':
                 if (!gameProperties.gameInProgress) {
                     bot.sendMessage({
@@ -366,7 +367,7 @@ function sendCodeToNextEncryptor (gameProperties) {
 
     setTimeout(() => {  if (gameProperties.currentTeam == 'black' && gameProperties.blackTeamClues.length > 0) {
                             bot.sendMessage({
-                                to: gameProperties.currentEncryptor.userID,
+                                to: gameProperties.channelID,
                                 message: '---------------------------------------------------------------------------\
                                          \nThe black team\'s known clues are:\
                                          \n1 - ' + gameProperties.blackTeamClues[0] + '\
@@ -376,7 +377,7 @@ function sendCodeToNextEncryptor (gameProperties) {
                             });
                         } else if(gameProperties.whiteTeamClues.length > 0) {
                             bot.sendMessage({
-                                to: gameProperties.currentEncryptor.userID,
+                                to: gameProperties.channelID,
                                 message: '---------------------------------------------------------------------------\
                                          \nThe white team\'s known clues are:\
                                          \n1 - ' + gameProperties.blackTeamClues[0] + '\
@@ -626,7 +627,7 @@ function checkEndGameOrNewRound(gameProperties) {
     }
 
     if (!blackTeamWins && !whiteTeamWins) {
-        startNewRound();
+        startNewRound(gameProperties);
     } else {
         if (blackTeamWins && whiteTeamWins) {
             bot.sendMessage({
@@ -637,9 +638,9 @@ function checkEndGameOrNewRound(gameProperties) {
             setTimeout(() => { tiebreaker(gameProperties); }, 1000)
         } else {
             if (blackTeamWins) {
-                victory('black');
+                victory('black', GameProperties);
             } else {
-                victory('white');
+                victory('white', GameProperties);
             }
         }
     }
@@ -657,7 +658,7 @@ function tiebreaker(gameProperties) {
 }
 
 // Someone has won a glorious victory
-function victory(team) {
+function victory(team, gameProperties) {
     var victoryGif = VictoryGifList[Math.floor(Math.random()*VictoryGifList.length)];
 
     bot.sendMessage({
@@ -676,29 +677,29 @@ function victory(team) {
 }
 
 // Start a new round of the game
-function startNewRound() {
+function startNewRound(gameProperties) {
     if (gameProperties.currentTeam == 'black') {
-        for (var i = 0; i < gameProperties.currentCode.length; i++) {
+        for (var i = 0; i < 3; i++) {
             if (gameProperties.blackTeamClues.length == 0) {
                 gameProperties.blackTeamClues = ["", "", "", ""];
             }
             
             if (gameProperties.blackTeamClues[gameProperties.currentCode[i]] == "") {
-                gameProperties.blackTeamClues[gameProperties.currentCode[i]] = gameProperties.blackTeamClues[i];
+                gameProperties.blackTeamClues[gameProperties.currentCode[i]] = gameProperties.currentClues[i];
             } else {
-                gameProperties.blackTeamClues[gameProperties.currentCode[i]] = gameProperties.blackTeamClues[gameProperties.currentCode[i]] + ', ' + gameProperties.blackTeamClues[i];
+                gameProperties.blackTeamClues[gameProperties.currentCode[i]] = gameProperties.blackTeamClues[gameProperties.currentCode[i]] + ', ' + gameProperties.currentClues[i];
             }
         }
     } else {
-        for (var i = 0; i < gameProperties.currentCode.length; i++) {
+        for (var i = 0; i < 3; i++) {
             if (gameProperties.whiteTeamClues.length == 0) {
                 gameProperties.whiteTeamClues = ["", "", "", ""];
             }
             
             if (gameProperties.whiteTeamClues[gameProperties.currentCode[i]] == "") {
-                gameProperties.whiteTeamClues[gameProperties.currentCode[i]] = gameProperties.whiteTeamClues[i];
+                gameProperties.whiteTeamClues[gameProperties.currentCode[i]] = gameProperties.currentClues[i];
             } else {
-                gameProperties.whiteTeamClues[gameProperties.currentCode[i]] = gameProperties.whiteTeamClues[gameProperties.currentCode[i]] + ', ' + gameProperties.whiteTeamClues[i];
+                gameProperties.whiteTeamClues[gameProperties.currentCode[i]] = gameProperties.whiteTeamClues[gameProperties.currentCode[i]] + ', ' + gameProperties.currentClues[i];
             }
         }
     }
@@ -707,7 +708,7 @@ function startNewRound() {
     gameProperties.whiteTeamGuess = [];
     gameProperties.currentCode = [];
     gameProperties.currentTeam = "";
-    gameP.currentEncryptor = null;
+    gameProperties.currentEncryptor = null;
     gameProperties.currentClues = [];
 
     sendCodeToNextEncryptor(gameProperties);
