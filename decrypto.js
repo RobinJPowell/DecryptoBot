@@ -781,7 +781,7 @@ function GameProperties (channelID, now) {
     this.currentTeam = "";
     this.currentEncryptor = null;
     this.currentClues = [];
-    this.roundsPlayed = roundNumber;
+    this.roundsPlayed = 1;
 }
 
 // Each player in a team is stored in an instance of Player
