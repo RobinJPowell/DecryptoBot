@@ -74,7 +74,8 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                               \n!dc join black/white - Joins the black or white team\
                               \n!dc ready - Indicates that team selection is complete, and you wish to begin the game\
                               \n!dc clues clue1, clue2, clue3 - Submit your clues when you are the Encryptor\
-                              \n!dc guess 123 - Guess the order of the keywords'
+                              \n!dc guess 123 - Guess the order of the keywords\
+                              \n!dc keywords word1, word2, word3, word4 - Guess the opponent\'s keywords during a tiebreaker'
                 });
                 break;
             case 'rules':
@@ -164,6 +165,11 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                         to: channelID,
                         message: 'Team selection is still in progress, it\'s too early for clues'
                     });
+                } else if (gameProperties.tiebreakInProgress) {
+                    bot.sendMessage({
+                        to: channelID,
+                        message: 'A tiebreaker is in progress, the time for clues has passed'
+                    });
                 } else if (gameProperties.currentEncryptor.userID != userID) {
                     bot.sendMessage({
                         to: channelID,
@@ -190,6 +196,11 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                         to: channelID,
                         message: 'Team selection is still in progress, chill out with your guesses'
                     });
+                } else if (gameProperties.tiebreakInProgress) {
+                    bot.sendMessage({
+                        to: channelID,
+                        message: 'A tiebreaker is in progress, the time for guesses has passed'
+                    });
                 } else if (gameProperties.currentClues.length == 0) {
                     bot.sendMessage({
                         to: channelID,
@@ -197,6 +208,27 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                     });
                 } else {
                     validateAndRecordGuess(args[1], userID, gameProperties);
+                }
+                break;
+            // Guess the opponents keywords during a tiebreaker
+            case 'keyword':
+            case 'keywords':
+                if (!gameProperties.gameInProgress) {
+                    bot.sendMessage({
+                        to: channelID,
+                        message: 'There\'s no game currently in progress, type \'!dc start\' to begin one'
+                    });
+                } else if (!gameProperties.tiebreakInProgress) {
+                    bot.sendMessage({
+                        to: channelID,
+                        message: 'There is no tiebreaker currently in progress, you don\'t need to guess keywords just yet'
+                    });
+                } else {
+                    validateAndRecordKeywordGuesses(args, userID, gameProperties);
+
+                    if (gameProperties.blackTeamKeywordGuess.length == 4 && gameProperties.whiteTeamKeywordGuess.length ==4) {
+                        setTimeout(() => { scoreKeywordGuesses(gameProperties) }, 1000);
+                    }
                 }
                 break;
             // Ends an in progress game
@@ -290,6 +322,14 @@ function sendKeywordsToTeams (gameProperties) {
         var keyword = KeywordList[Math.floor(Math.random()*KeywordList.length)];
         if (keywordsToUse.indexOf(keyword) == -1) {
             keywordsToUse.push(keyword);
+        }
+    }
+
+    for (var i = 0; i < keywordsToUse.length; i++) {
+        if (i < 4) {
+            gameProperties.blackTeamKeywords[i] = keywordsToUse[i];
+        } else {
+            gameProperties.whiteTeamKeywords[i] = keywordsToUse[i];
         }
     }
 
@@ -394,7 +434,7 @@ function validateAndRecordClues(args, gameProperties) {
     var cluesList = "";
     
     // args is split by ' ', need to recombine and split by ',' to get the clues
-    // args[0] will always have been the keyword 'clues', so start at 1
+    // args[0] will always have been the command word 'clues', so start at 1
     for (var i = 1; i < args.length; i++) {
         cluesList = cluesList + " " + args[i];
     }
@@ -599,7 +639,7 @@ function scoreRound(gameProperties) {
                                 message: 'The scores are:\
                                           \nBlack Team - ' + gameProperties.blackTeamInterceptionTokens + '/2 Interception Tokens, ' + gameProperties.blackTeamMiscommunicationTokens + '/2 Miscommuniction Tokens\
                                           \nWhite Team - ' + gameProperties.whiteTeamInterceptionTokens + '/2 Interception Tokens, ' + gameProperties.whiteTeamMiscommunicationTokens + '/2 Miscommuniction Tokens\
-                                          \n---------------------------------------------------------------------------'                                  
+                                          \n---------------------------------------------------------------------------'
                             });
 
                             checkEndGameOrNewRound(gameProperties)
@@ -630,7 +670,8 @@ function checkEndGameOrNewRound(gameProperties) {
         if (gameProperties.roundNumber == 8) {
             bot.sendMessage({
                 to: gameProperties.channelID,
-                message: 'The 8th round has ended with no winner so the game is a draw, we will go to a tiebreaker'
+                message: 'The 8th round has ended with no winner so the game is a draw, we will go to a tiebreaker\
+                          \n---------------------------------------------------------------------------'
             });
 
             setTimeout(() => { tiebreaker(gameProperties); }, 1000)
@@ -641,7 +682,8 @@ function checkEndGameOrNewRound(gameProperties) {
         if (blackTeamWins && whiteTeamWins) {
             bot.sendMessage({
                 to: gameProperties.channelID,
-                message: 'The game is a draw, we will go to a tiebreaker'
+                message: 'The game is a draw, we will go to a tiebreaker\
+                          \n---------------------------------------------------------------------------'
             });
 
             setTimeout(() => { tiebreaker(gameProperties); }, 1000)
@@ -657,13 +699,159 @@ function checkEndGameOrNewRound(gameProperties) {
 
 // Tiebreaker if the game is drawn
 function tiebreaker(gameProperties) {
+    gameProperties.tiebreakInProgress = true;
+
+    var blackTeamPoints = gameProperties.blackTeamInterceptionTokens - gameProperties.blackTeamMiscommunicationTokens;
+    var whiteTeamPoints = gameProperties.whiteTeamInterceptionTokens - gameProperties.whiteTeamMiscommunicationTokens;
+
     bot.sendMessage({
         to: gameProperties.channelID,
-        message: 'I haven\'t written the tiebreak code, sort it out amongst yourselves\
-                  \nThanks for playing'
+        message: 'Tiebreak Points (1 per interception, -1 per miscommunication:\
+                  \nBlack Team - ' + blackTeamPoints + ' points\
+                  \nWhite Team - ' + whiteTeamPoints + ' points\
+                  \n---------------------------------------------------------------------------'
     });
 
-    endGame();
+    setTimeout(() => {  if (blackTeamPoints > whiteTeamPoints) {
+                            victory('black', gameProperties);
+                            endGame();
+                        } else if (blackTeamPoints < whiteTeamPoints) {
+                            victory('white', gameProperties);
+                            endGame();
+                        } else {
+                            bot.sendMessage({
+                                to: gameProperties.channelID,
+                                message: 'The game is still tied, you should now attempt to guess the opposing team\'s keywords\
+                                          \nOne point will be awarded per correct guess\
+                                          \nSubmit your guesses using \'!dc keywords word1, word2, word3, word4\'\
+                                          \nOnly the first subission from each team will be accepted\
+                                          \nNote that despite the name, a keyword can be multiple words (e.g. Roman Empire)'
+                            });
+                        }
+                    }, 1000);    
+}
+
+// Validate and record keyword guesses for the tiebreaker
+function validateAndRecordKeywordGuesses(args, userID, gameProperties) {
+    var keywordsList = "";
+    
+    // args is split by ' ', need to recombine and split by ',' to get the keywords
+    // args[0] will always have been the command word 'keywords', so start at 1
+    for (var i = 1; i < args.length; i++) {
+        keywordsList = keywordsList + " " + args[i];
+    }
+
+    var playerIndex = gameProperties.blackTeamMembers.findIndex(element => element.userID == userID);
+
+    if (playerIndex > -1) {
+        if (gameProperties.blackTeamKeywordGuess.length > 0) {
+            bot.sendMessage({
+                to: gameProperties.channelID,
+                message: 'Black team have already submitted a guess, no takebacks'
+            });
+            return;
+        }
+
+        gameProperties.blackTeamKeywordGuess = keywordsList.split(',');
+
+        if (gameProperties.blackTeamKeywordGuess.length != 4) {
+            bot.sendMessage({
+                to: gameProperties.channelID,
+                message: 'You have to submit 4 keywords'
+            });
+            gameProperties.blackTeamKeywordGuess = [];
+            return;
+        }
+
+        bot.sendMessage({
+            to: gameProperties.channelID,
+            message: 'Black team\'s guess has been recorded'
+        });
+    } else {
+        playerIndex = gameProperties.whiteTeamMembers.findIndex(element => element.userID == userID);
+
+        if (playerIndex > -1) {
+            if (gameProperties.whiteTeamKeywordGuess.length > 0) {
+                bot.sendMessage({
+                    to: gameProperties.channelID,
+                    message: 'White team have already submitted a guess, no takebacks'
+                });
+                return;
+            }
+    
+            gameProperties.whiteTeamKeywordGuess = keywordsList.split(',');
+    
+            if (gameProperties.whiteTeamKeywordGuess.length != 4) {
+                bot.sendMessage({
+                    to: gameProperties.channelID,
+                    message: 'You have to submit 4 keywords'
+                });
+                gameProperties.whiteTeamKeywordGuess = [];
+                return;
+            }
+    
+            bot.sendMessage({
+                to: gameProperties.channelID,
+                message: 'White team\'s guess has been recorded'
+            });
+        } else {
+            bot.sendMessage({
+                to: gameProperties.channelID,
+                message: 'You\'re not on a team, so can\'t make a guess. Why not join in next round?'
+            });
+        }
+    }
+}
+
+// Score each team's keyword guesses for the tiebreaker
+function scoreKeywordGuesses(gameProperties) {
+    var blackTeamScore = 0;
+    var whiteTeamScore = 0;
+
+    for (var i = 0; i < 4; i++) {
+        if (gameProperties.blackTeamKeywords[i].toLowerCase() == gameProperties.blackTeamKeywordGuess[i].toLowerCase()) {
+            blackTeamScore += 1;
+        }
+        if (gameProperties.whiteTeamKeywords[i].toLowerCase() == gameProperties.whiteTeamKeywordGuess[i].toLowerCase()) {
+            whiteTeamScore += 1;
+        }
+    }
+        
+    bot.sendMessage({
+        to: gameProperties.channelID,
+        message: 'Black Team have guessed ' + blackTeamScore + ' keywords correctly\
+                  \n 1 - Guess: ' + gameProperties.blackTeamKeywordGuess[0] + ', Answer: ' + gameProperties.blackTeamKeywords[0] + '\
+                  \n 2 - Guess: ' + gameProperties.blackTeamKeywordGuess[1] + ', Answer: ' + gameProperties.blackTeamKeywords[1] + '\
+                  \n 3 - Guess: ' + gameProperties.blackTeamKeywordGuess[2] + ', Answer: ' + gameProperties.blackTeamKeywords[2] + '\
+                  \n 4 - Guess: ' + gameProperties.blackTeamKeywordGuess[3] + ', Answer: ' + gameProperties.blackTeamKeywords[3] + '\
+                  \n---------------------------------------------------------------------------'
+    });
+
+    setTimeout(() => {  bot.sendMessage({
+                            to: gameProperties.channelID,
+                            message: 'White Team have guessed ' + whiteTeamScore + ' keywords correctly\
+                                      \n 1 - Guess: ' + gameProperties.whiteTeamKeywordGuess[0] + ', Answer: ' + gameProperties.whiteTeamKeywords[0] + '\
+                                      \n 2 - Guess: ' + gameProperties.whiteTeamKeywordGuess[1] + ', Answer: ' + gameProperties.whiteTeamKeywords[1] + '\
+                                      \n 3 - Guess: ' + gameProperties.whiteTeamKeywordGuess[2] + ', Answer: ' + gameProperties.whiteTeamKeywords[2] + '\
+                                      \n 4 - Guess: ' + gameProperties.whiteTeamKeywordGuess[3] + ', Answer: ' + gameProperties.whiteTeamKeywords[3] + '\
+                                      \n---------------------------------------------------------------------------'
+                        });
+
+                        setTimeout(() => {  if (blackTeamScore > whiteTeamScore) {
+                                                victory('black', gameProperties);
+                                            } else if (blackTeamScore < whiteTeamScore) {
+                                                victory('white', gameProperties);
+                                            } else {
+                                                bot.sendMessage({
+                                                    to: gameProperties.channelID,
+                                                    message: 'After all of that it\'s still a tie\
+                                                              \nHow very boring\
+                                                              \nWhy not try again and see if you can achieve a result this time'
+                                                });
+                                            }
+
+                                        }, 1000)
+                    }, 1000)
 }
 
 // Someone has won a glorious victory
@@ -738,18 +926,23 @@ function endGame(gameProperties) {
 
     gameProperties.gameInProgress = false;
     gameProperties.selectingTeams = false;
+    gameProperties.tiebreakInProgress = false;
     gameProperties.blackTeamMembers = [];
     gameProperties.nextBlackEncryptor = 0;
+    gameProperties.blackTeamKeywords = [];
     gameProperties.blackTeamGuess = [];
     gameProperties.blackTeamInterceptionTokens = 0;
     gameProperties.blackTeamMiscommunicationTokens = 0;
     gameProperties.blackTeamClues = [];
+    gameProperties.blackTeamKeywordGuess = [];
     gameProperties.whiteTeamMembers = [];
     gameProperties.nextWhiteEncryptor = 0;
+    gameProperties.whiteTeamKeywords = [];
     gameProperties.whiteTeamGuess = [];
     gameProperties.whiteTeamInterceptionTokens = 0;
     gameProperties.whiteTeamMiscommunicationTokens = 0;
     gameProperties.whiteTeamClues = [];
+    gameProperties.whiteTeamKeywordGuess = [];
     gameProperties.nextTurn = 'white';
     gameProperties.currentCode = [];
     gameProperties.currentTeam = "";
@@ -763,18 +956,23 @@ function GameProperties (channelID, now) {
     this.channelID = channelID;
     this.gameInProgress = false;
     this.selectingTeams = false;
+    this.tiebreakInProgress = false;
     this.blackTeamMembers = [];
     this.nextBlackEncryptor = 0
+    this.blackTeamKeywords = [];
     this.blackTeamGuess = [];
     this.blackTeamInterceptionTokens = 0;
     this.blackTeamMiscommunicationTokens = 0;
     this.blackTeamClues = [];
+    this.blackTeamKeywordGuess = [];
     this.whiteTeamMembers = [];
     this.nextWhiteEncryptor = 0;
+    this.whiteTeamKeywords = [];
     this.whiteTeamGuess = [];
     this.whiteTeamInterceptionTokens = 0;
     this.whiteTeamMiscommunicationTokens = 0;
     this.whiteTeamClues = [];
+    this.whiteTeamKeywordGuess = [] ;
     this.lastGameStartTime = now;
     this.nextTurn = 'white';
     this.currentCode = [];
