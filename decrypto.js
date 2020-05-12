@@ -36,7 +36,7 @@ bot.on('ready', function (evt) {
 });
 bot.on('message', function (user, userID, channelID, message, evt) {
     // Bot listens for messages that start with `!dc`
-    if (message.substring(0, 3) == '!dc') {
+    if (message.substring(0, 3).toLowerCase() == '!dc') {
         var args = message.substring(4).split(' ');
 
         Logger.debug('Command ' + args + ' from ' + userID + ' in channel ' + channelID)  
@@ -51,7 +51,7 @@ bot.on('message', function (user, userID, channelID, message, evt) {
             AllGames.push(gameProperties);
         }
 
-        switch(args[0]) {
+        switch(args[0].toLowerCase()) {
             // List all possible commands
             case 'help':
                 bot.sendMessage({
