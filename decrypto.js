@@ -207,7 +207,7 @@ bot.on('message', function (user, userID, channelID, message, evt) {
                         message: 'No clues have been given yet, cool your jets'
                     });
                 } else {
-                    validateAndRecordGuess(args[1], userID, gameProperties);
+                    validateAndRecordCodeGuess(args[1], userID, gameProperties);
                 }
                 break;
             // Guess the opponents keywords during a tiebreaker
@@ -468,7 +468,7 @@ function validateAndRecordClues(args, gameProperties) {
 }
 
 // Validate that 3 digits have been submitted and that they are the first guess for a team, then record them
-function validateAndRecordGuess(guess, userID, gameProperties) {    
+function validateAndRecordCodeGuess(guess, userID, gameProperties) {    
     if (guess == null || guess.length != 3 || guess != parseInt(guess) || guess.indexOf('.') > -1) {
         bot.sendMessage({
             to: gameProperties.channelID,
@@ -521,30 +521,35 @@ function validateAndRecordGuess(guess, userID, gameProperties) {
                     message: 'White team have already entered their guess' 
                 });
                 return;  
-            }
-        }        
+            }      
 
-        for (var i = 0; i < guess.length; i++) {
-            if (gameProperties.whiteTeamGuess.indexOf(guess.charAt(i)) > -1 ) {
+            for (var i = 0; i < guess.length; i++) {
+                if (gameProperties.whiteTeamGuess.indexOf(guess.charAt(i)) > -1 ) {
+                    bot.sendMessage({
+                        to: gameProperties.channelID,
+                        message: 'Your cannot enter the same digit multiple times' 
+                    });
+                    gameProperties.whiteTeamGuess = [];
+                    return;
+                }
+                gameProperties.whiteTeamGuess.push(guess.charAt(i));
+            }
+
+            if (gameProperties.currentTeam == 'white' && gameProperties.blackTeamGuess.length != 3) {
                 bot.sendMessage({
                     to: gameProperties.channelID,
-                    message: 'Your cannot enter the same digit multiple times' 
+                    message: 'It was the black team\'s turn to guess but oh well, you\'ve only hurt yourselves' 
                 });
-                gameProperties.whiteTeamGuess = [];
-                return;
+            } else {
+                bot.sendMessage({
+                    to: gameProperties.channelID,
+                    message: 'The black team should now submit a guess using \'!dc guess 123\''
+                });
             }
-            gameProperties.whiteTeamGuess.push(guess.charAt(i));
-        }
-
-        if (gameProperties.currentTeam == 'white' && gameProperties.blackTeamGuess.length != 3) {
-            bot.sendMessage({
-                to: gameProperties.channelID,
-                message: 'It was the black team\'s turn to guess but oh well, you\'ve only hurt yourselves' 
-            });
         } else {
             bot.sendMessage({
                 to: gameProperties.channelID,
-                message: 'The black team should now submit a guess using \'!dc guess 123\''
+                message: 'You\'re not on a team, so can\'t make a guess. Why not join in next round?'
             });
         }
     }
