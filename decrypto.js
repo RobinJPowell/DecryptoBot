@@ -627,7 +627,16 @@ function checkEndGameOrNewRound(gameProperties) {
     }
 
     if (!blackTeamWins && !whiteTeamWins) {
-        startNewRound(gameProperties);
+        if (gameProperties.roundNumber == 8) {
+            bot.sendMessage({
+                to: gameProperties.channelID,
+                message: 'The 8th round has ended with no winner so the game is a draw, we will go to a tiebreaker'
+            });
+
+            setTimeout(() => { tiebreaker(gameProperties); }, 1000)
+        } else {
+            startNewRound(gameProperties);
+        }
     } else {
         if (blackTeamWins && whiteTeamWins) {
             bot.sendMessage({
@@ -710,6 +719,7 @@ function startNewRound(gameProperties) {
     gameProperties.currentTeam = "";
     gameProperties.currentEncryptor = null;
     gameProperties.currentClues = [];
+    gameProperties.roundNumber += 1;
 
     sendCodeToNextEncryptor(gameProperties);
 }
@@ -744,7 +754,8 @@ function endGame(gameProperties) {
     gameProperties.currentCode = [];
     gameProperties.currentTeam = "";
     gameProperties.currentEncryptor = null;
-    gameProperties.currentClues = []
+    gameProperties.currentClues = [];
+    gameProperties.roundNumber = 1;
 }
 
 // Each game in progress is stored in an instance of GameProperties
@@ -770,6 +781,7 @@ function GameProperties (channelID, now) {
     this.currentTeam = "";
     this.currentEncryptor = null;
     this.currentClues = [];
+    this.roundsPlayed = roundNumber;
 }
 
 // Each player in a team is stored in an instance of Player
