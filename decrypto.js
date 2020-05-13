@@ -719,10 +719,10 @@ function tiebreaker(gameProperties) {
 
     setTimeout(() => {  if (blackTeamPoints > whiteTeamPoints) {
                             victory('black', gameProperties);
-                            endGame();
+                            endGame(gameProperties);
                         } else if (blackTeamPoints < whiteTeamPoints) {
                             victory('white', gameProperties);
-                            endGame();
+                            endGame(gameProperties);
                         } else {
                             bot.sendMessage({
                                 to: gameProperties.channelID,
@@ -875,7 +875,7 @@ function victory(team, gameProperties) {
                         });
                     }, 1000);
  
-    endGame();
+    endGame(gameProperties);
 }
 
 // Start a new round of the game
