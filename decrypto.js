@@ -397,36 +397,31 @@ function sendCodeToNextEncryptor (gameProperties) {
         message: 'Your code is ' + currentCode
     });
 
+    var encryptorMessage = 'It is the ' + gameProperties.currentTeam + ' team\'s turn\
+                           \n' + gameProperties.currentEncryptor.user + ' is their Encryptor this round, and has been sent a code\
+                           \nWhen you are ready ' + gameProperties.currentEncryptor.user + ', submit your clues using \'!dc clues clue1, clue2, clue3\'\
+                           \nDon\'t forget the commas, I won\'t understand you otherwise';
+
+    if (gameProperties.currentTeam == 'black' && gameProperties.blackTeamClues.length > 0) {
+        encryptorMessage = encryptorMessage + '\n---------------------------------------------------------------------------\
+                                              \nThe black team\'s known clues are:\
+                                              \n1 - ' + gameProperties.blackTeamClues[0] + '\
+                                              \n2 - ' + gameProperties.blackTeamClues[1] + '\
+                                              \n3 - ' + gameProperties.blackTeamClues[2] + '\
+                                              \n4 - ' + gameProperties.blackTeamClues[3];
+    } else if (gameProperties.whiteTeamClues.length > 0) {
+        encryptorMessage = encryptorMessage + '\n---------------------------------------------------------------------------\
+                                              \nThe white team\'s known clues are:\
+                                              \n1 - ' + gameProperties.blackTeamClues[0] + '\
+                                              \n2 - ' + gameProperties.blackTeamClues[1] + '\
+                                              \n3 - ' + gameProperties.blackTeamClues[2] + '\
+                                              \n4 - ' + gameProperties.blackTeamClues[3];
+    }
+
     bot.sendMessage({
         to: gameProperties.channelID,
-        message: 'It is the ' + gameProperties.currentTeam + ' team\'s turn\
-                 \n' + gameProperties.currentEncryptor.user + ' is their Encryptor this round, and has been sent a code\
-                 \nWhen you are ready ' + gameProperties.currentEncryptor.user + ', submit your clues using \'!dc clues clue1, clue2, clue3\'\
-                 \nDon\'t forget the commas, I won\'t understand you otherwise'
+        message: encryptorMessage
     });
-
-    setTimeout(() => {  if (gameProperties.currentTeam == 'black' && gameProperties.blackTeamClues.length > 0) {
-                            bot.sendMessage({
-                                to: gameProperties.channelID,
-                                message: '---------------------------------------------------------------------------\
-                                         \nThe black team\'s known clues are:\
-                                         \n1 - ' + gameProperties.blackTeamClues[0] + '\
-                                         \n2 - ' + gameProperties.blackTeamClues[1] + '\
-                                         \n3 - ' + gameProperties.blackTeamClues[2] + '\
-                                         \n4 - ' + gameProperties.blackTeamClues[3]
-                            });
-                        } else if(gameProperties.whiteTeamClues.length > 0) {
-                            bot.sendMessage({
-                                to: gameProperties.channelID,
-                                message: '---------------------------------------------------------------------------\
-                                         \nThe white team\'s known clues are:\
-                                         \n1 - ' + gameProperties.blackTeamClues[0] + '\
-                                         \n2 - ' + gameProperties.blackTeamClues[1] + '\
-                                         \n3 - ' + gameProperties.blackTeamClues[2] + '\
-                                         \n4 - ' + gameProperties.blackTeamClues[3]
-                            });
-                        }
-                    }, 1000);
 }
 
 // Validate that 3 clues have been submitted and record them
@@ -555,12 +550,6 @@ function validateAndRecordCodeGuess(guess, userID, gameProperties) {
     }
 
     if (gameProperties.blackTeamGuess.length == 3 && gameProperties.whiteTeamGuess.length == 3) {
-        bot.sendMessage({
-            to: gameProperties.channelID,
-            message: 'Both teams have recorded guesses, let\'s see how you did\
-                      \n---------------------------------------------------------------------------'
-        });
-
         setTimeout(() => { scoreRound(gameProperties); }, 1000);
     }
 }
@@ -568,11 +557,8 @@ function validateAndRecordCodeGuess(guess, userID, gameProperties) {
 // Scores the current round once guesses have been submitted
 function scoreRound(gameProperties) {
     var pointsScored = false;
-    
-    bot.sendMessage({
-        to: gameProperties.channelID,
-        message: 'The correct code was ' + gameProperties.currentCode[0]  + gameProperties.currentCode[1]  + gameProperties.currentCode[2]
-    });
+    var scoreMessage = '---------------------------------------------------------------------------\
+                       \nThe correct code was ' + gameProperties.currentCode[0]  + gameProperties.currentCode[1]  + gameProperties.currentCode[2];
 
     if (gameProperties.currentTeam == 'black') {
         if (gameProperties.currentCode[0] != gameProperties.blackTeamGuess[0]
@@ -580,11 +566,7 @@ function scoreRound(gameProperties) {
             || gameProperties.currentCode[2] != gameProperties.blackTeamGuess[2]) {
             gameProperties.blackTeamMiscommunicationTokens += 1;
             pointsScored = true;
-
-            bot.sendMessage({
-                to: gameProperties.channelID,
-                message: 'The black team guessed incorrectly, and have recieved a miscommunication token'
-            });
+            scoreMessage = scoreMessage + '\nThe black team guessed incorrectly, and have recieved a miscommunication token';
         }
 
         if (gameProperties.currentCode[0] == gameProperties.whiteTeamGuess[0]
@@ -592,11 +574,7 @@ function scoreRound(gameProperties) {
             && gameProperties.currentCode[2] == gameProperties.whiteTeamGuess[2]) {
             gameProperties.whiteTeamInterceptionTokens += 1;
             pointsScored = true;
-
-            bot.sendMessage({
-                to: gameProperties.channelID,
-                message: 'The white team guessed correctly, and have recieved an interception token'
-            });
+            scoreMessage = scoreMessage + '\nThe white team guessed correctly, and have recieved an interception token';
         }
     } else {
         if (gameProperties.currentCode[0] != gameProperties.whiteTeamGuess[0]
@@ -604,11 +582,7 @@ function scoreRound(gameProperties) {
             || gameProperties.currentCode[2] != gameProperties.whiteTeamGuess[2]) {
             gameProperties.whiteTeamMiscommunicationTokens += 1;
             pointsScored = true;
-
-            bot.sendMessage({
-                to: gameProperties.channelID,
-                message: 'The white team guessed incorrectly, and have recieved a miscommunication token'
-            });
+            scoreMessage = scoreMessage + '\nThe white team guessed incorrectly, and have recieved a miscommunication token';
         }
 
         if (gameProperties.currentCode[0] == gameProperties.blackTeamGuess[0]
@@ -616,24 +590,19 @@ function scoreRound(gameProperties) {
             && gameProperties.currentCode[2] == gameProperties.blackTeamGuess[2]) {
             gameProperties.blackTeamInterceptionTokens += 1;
             pointsScored = true;
-
-            bot.sendMessage({
-                to: gameProperties.channelID,
-                message: 'The black team guessed correctly, and have recieved an interception token'
-            });
+            scoreMessage = scoreMessage + '\nThe black team guessed correctly, and have recieved an interception token';
         }
     }
 
     if (!pointsScored) {
-        bot.sendMessage({
-            to: gameProperties.channelID,
-            message: 'No points were scored this round'
-        });
+        scoreMessage = scoreMessage + '\nNo points were scored this turn';
     }
+
+    scoreMessage = scoreMessage + '\n---------------------------------------------------------------------------';
 
     bot.sendMessage({
         to: gameProperties.channelID,
-        message: '---------------------------------------------------------------------------'
+        message: scoreMessage
     });
 
     setTimeout(() => {  if (gameProperties.currentTeam == 'white') {
@@ -641,7 +610,7 @@ function scoreRound(gameProperties) {
                         } else {        
                             bot.sendMessage({
                                 to: gameProperties.channelID,
-                                message: 'The scores are:\
+                                message: 'At the end of round ' + gameProperties.roundNumber + ' the scores are:\
                                           \nBlack Team - ' + gameProperties.blackTeamInterceptionTokens + '/2 Interception Tokens, ' + gameProperties.blackTeamMiscommunicationTokens + '/2 Miscommuniction Tokens\
                                           \nWhite Team - ' + gameProperties.whiteTeamInterceptionTokens + '/2 Interception Tokens, ' + gameProperties.whiteTeamMiscommunicationTokens + '/2 Miscommuniction Tokens\
                                           \n---------------------------------------------------------------------------'
@@ -866,14 +835,9 @@ function victory(team, gameProperties) {
     bot.sendMessage({
         to: gameProperties.channelID,
         message: 'Congratulations ' + team + ' team, you have achieved glorious victory\
-                  \n' + victoryGif
+                  \n' + victoryGif + '\
+                  \nThanks for playing'
     });
-
-    setTimeout(() => { bot.sendMessage({
-                            to: gameProperties.channelID,
-                            message: 'Thanks for playing'
-                        });
-                    }, 1000);
  
     endGame(gameProperties);
 }
