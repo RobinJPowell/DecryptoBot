@@ -440,9 +440,9 @@ function validateAndRecordClues(args, gameProperties) {
         bot.sendMessage({
             to: gameProperties.channelID,
             message: 'The clues for this round are:\
-                      \n' + gameProperties.currentClues[0] + '\
-                      \n' + gameProperties.currentClues[1] + '\
-                      \n' + gameProperties.currentClues[2] + '\
+                      \n' + gameProperties.currentClues[0].trim() + '\
+                      \n' + gameProperties.currentClues[1].trim() + '\
+                      \n' + gameProperties.currentClues[2].trim() + '\
                       \n---------------------------------------------------------------------------'
         });
 
@@ -783,10 +783,10 @@ function scoreKeywordGuesses(gameProperties) {
     var whiteTeamScore = 0;
 
     for (var i = 0; i < 4; i++) {
-        if (gameProperties.blackTeamKeywords[i].toLowerCase() == gameProperties.blackTeamKeywordGuess[i].toLowerCase()) {
+        if (gameProperties.blackTeamKeywords[i].toLowerCase() == gameProperties.blackTeamKeywordGuess[i].trim().toLowerCase()) {
             blackTeamScore += 1;
         }
-        if (gameProperties.whiteTeamKeywords[i].toLowerCase() == gameProperties.whiteTeamKeywordGuess[i].toLowerCase()) {
+        if (gameProperties.whiteTeamKeywords[i].toLowerCase() == gameProperties.whiteTeamKeywordGuess[i].trim().toLowerCase()) {
             whiteTeamScore += 1;
         }
     }
@@ -851,9 +851,9 @@ function startNewRound(gameProperties) {
             }
             
             if (gameProperties.blackTeamClues[gameProperties.currentCode[i]] == "") {
-                gameProperties.blackTeamClues[gameProperties.currentCode[i]] = gameProperties.currentClues[i];
+                gameProperties.blackTeamClues[gameProperties.currentCode[i]] = gameProperties.currentClues[i].trim();
             } else {
-                gameProperties.blackTeamClues[gameProperties.currentCode[i]] = gameProperties.blackTeamClues[gameProperties.currentCode[i]] + ', ' + gameProperties.currentClues[i];
+                gameProperties.blackTeamClues[gameProperties.currentCode[i]] = gameProperties.blackTeamClues[gameProperties.currentCode[i]] + ', ' + gameProperties.currentClues[i].trim();
             }
         }
     } else {
@@ -863,9 +863,9 @@ function startNewRound(gameProperties) {
             }
             
             if (gameProperties.whiteTeamClues[gameProperties.currentCode[i]] == "") {
-                gameProperties.whiteTeamClues[gameProperties.currentCode[i]] = gameProperties.currentClues[i];
+                gameProperties.whiteTeamClues[gameProperties.currentCode[i]] = gameProperties.currentClues[i].trim();
             } else {
-                gameProperties.whiteTeamClues[gameProperties.currentCode[i]] = gameProperties.whiteTeamClues[gameProperties.currentCode[i]] + ', ' + gameProperties.currentClues[i];
+                gameProperties.whiteTeamClues[gameProperties.currentCode[i]] = gameProperties.whiteTeamClues[gameProperties.currentCode[i]] + ', ' + gameProperties.currentClues[i].trim();
             }
         }
     }
