@@ -470,6 +470,12 @@ function validateAndRecordCodeGuess(guess, userID, gameProperties) {
             message: 'Your guess must be 3 digits' 
         });
         return;
+    } else if (userId == gameProperties.currentEncryptor.userID) {
+        bot.sendMessage({
+            to: gameProperties.channelID,
+            message: 'The Encryptor is not allowed to submit a guess'
+        });
+        return;
     }
 
     var playerIndex = gameProperties.blackTeamMembers.findIndex(element => element.userID == userID);
