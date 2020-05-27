@@ -446,12 +446,31 @@ function validateAndRecordClues(args, gameProperties) {
                       \n---------------------------------------------------------------------------'
         });
 
-        setTimeout(() => { bot.sendMessage({
-                                to: gameProperties.channelID,
-                                message: 'The ' + otherTeam(gameProperties.currentTeam) + ' team should now submit a guess using \'!dc guess 123\'\
-                                          \nOnly the first guess submitted from each team will be accepted'
-                            });
-                        }, 1000);
+        if (roundNumber == 1) {
+            if (currentTeam == 'white') {
+                gameProperties.blackTeamGuess[0] = 0;
+                gameProperties.blackTeamGuess[1] = 0;
+                gameProperties.blackTeamGuess[2] = 0;
+            } else {
+                gameProperties.whiteTeamGuess[0] = 0;
+                gameProperties.whiteTeamGuess[1] = 0;
+                gameProperties.whiteTeamGuess[2] = 0;
+            }
+
+            setTimeout(() => { bot.sendMessage({
+                                    to: gameProperties.channelID,
+                                    message: 'The ' + gameProperties.currentTeam + ' team should now submit a guess using \'!dc guess 123\'\
+                                             \nOnly the Encryptor\'s team gets to guess in the first round'
+                                    });
+                            }, 1000);
+        } else {
+            setTimeout(() => { bot.sendMessage({
+                                    to: gameProperties.channelID,
+                                    message: 'The ' + otherTeam(gameProperties.currentTeam) + ' team should now submit a guess using \'!dc guess 123\'\
+                                             \nOnly the first guess submitted from each team will be accepted'
+                                    });
+                            }, 1000);
+        }
     } else {
         bot.sendMessage({
             to: gameProperties.channelID,
@@ -467,7 +486,7 @@ function validateAndRecordCodeGuess(guess, userID, gameProperties) {
     if (guess == null || guess.length != 3 || guess != parseInt(guess) || guess.indexOf('.') > -1) {
         bot.sendMessage({
             to: gameProperties.channelID,
-            message: 'Your guess must be 3 digits' 
+            message: 'Your guess must be 3 digits'
         });
         return;
     } else if (userId == gameProperties.currentEncryptor.userID) {
@@ -954,7 +973,7 @@ function GameProperties (channelID, now) {
     this.currentTeam = "";
     this.currentEncryptor = null;
     this.currentClues = [];
-    this.roundsPlayed = 1;
+    this.roundNumber = 1;
 }
 
 // Each player in a team is stored in an instance of Player
